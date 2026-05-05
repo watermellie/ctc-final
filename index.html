@@ -188,6 +188,32 @@
             cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.15); transition: 0.2s;
         }
         .confirm-plant-btn:hover { transform: translate(-50%, -2px); box-shadow: 0 12px 25px rgba(0,0,0,0.2); }
+
+        /* Fact Popup & Sparkles */
+        .fact-popup {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -40%);
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 20px; text-align: center; z-index: 300;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.5);
+            opacity: 0; pointer-events: none; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 350px; color: #1a1a1a;
+        }
+        .fact-popup.active { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+        .fact-popup h3 { font-size: 1.5rem; font-weight: 300; letter-spacing: -0.02em; margin-top: 0; margin-bottom: 15px; }
+        .fact-popup p { font-size: 1.05rem; font-weight: 300; line-height: 1.6; color: #555; margin-bottom: 20px; }
+        
+        body.dark-mode .fact-popup { background: rgba(30,30,30,0.85); color: #fcfcfc; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); }
+        body.dark-mode .fact-popup p { color: #ccc; }
+
+        .sparkle { 
+            position: absolute; width: 4px; height: 4px; background: #FFD700; 
+            border-radius: 50%; box-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700; 
+            animation: twinkle 1.5s infinite alternate ease-in-out; pointer-events: none;
+        }
+        @keyframes twinkle { 
+            0% { opacity: 0.2; transform: scale(0.5) translateY(0); } 
+            100% { opacity: 1; transform: scale(1.5) translateY(-10px); } 
+        }
     </style>
 </head>
 <body>
@@ -213,11 +239,19 @@
         <div class="about-content">
             <h2 class="about-title">motherland.</h2>
             <div class="about-text">
-                <p>A collaborative digital sanctuary. Leave a piece of yourself behind in a growing, shared ecosystem.</p>
-                <p>Crafted with WebGL and Three.js, this experience explores the intersection of memory, interactive 3D spaces, and dynamic light.</p>
+                <p>A collaborative digital sanctuary. Motherland reimagines "home" as a shared space of belonging. Just as real forests share nutrients through underground networks, this ecosystem thrives on community. By putting down roots and leaving a memory, your tree grows alongside those of strangers, transforming isolated moments into a lush, collective human experience.
+
+The experience is also a gentle tribute to nature, inviting reflection on our ties to the earth, ecosystem fragility, and the vital importance of conservation. We don't just grow the forest; it grounds us in return.</p>
+                <p>Crafted with WebGL and Three.js, the frontend features a custom 3D globe with dynamic day/night lighting. The real-time, multi-user ecosystem is powered by Firebase Cloud Firestore, instantly broadcasting tree coordinates and user memories across all connected clients.</p>
             </div>
             <button id="close-about-btn" class="play-btn" style="padding: 10px 35px;">Return</button>
         </div>
+    </div>
+
+    <div id="fact-popup" class="fact-popup">
+        <h3>did you know?</h3>
+        <p id="fact-text">...</p>
+        <button id="close-fact-btn" class="ui-btn small" style="margin-top: 15px;">Continue</button>
     </div>
 
     <div id="builder-overlay" class="entrance-overlay hidden" style="display: none; z-index: 50;">
@@ -268,7 +302,6 @@
 <input type="range" id="time-slider" min="0" max="100" value="0" step="0.001" class="time-slider">    </div>
 
     <div class="bottom-left-ui">
-        <button id="reset-btn" class="ui-btn small">Reset Demo</button>
         <button id="mute-btn" class="ui-btn small">🔊 Mute</button>
     </div>
     
@@ -346,7 +379,9 @@ onSnapshot(collection(db, "trees"), (snapshot) => {
                 user: data.user,
                 note: data.note,
                 styleName: treeNames[data.styleIndex - 1],
-                colorName: colors[data.colorIndex].name
+                colorName: colors[data.colorIndex].name,
+                baseScale: finalTreeScale, // WE NEED THIS
+                targetScale: finalTreeScale // AND THIS
             };
 
             scene.add(tree);
@@ -442,6 +477,14 @@ onSnapshot(collection(db, "trees"), (snapshot) => {
         let currentUser = "";
         const plantedTrees = []; 
         let hoveredTree = null;
+        let sessionTreesPlanted = 0; // Tracks how many trees THIS user planted this session
+        const motherlandFacts = [
+            "Trees talk to each other. Beneath the soil, fungal networks allow trees to share nutrients and send distress signals to their neighbors.",
+            "Some trees keep a chemical memory of environmental stress, passing down resilience to their saplings so the next generation grows stronger.",
+            "Neighborhoods with strong tree canopies are significantly cooler in the summer, creating safe, shared sanctuaries.",
+            "Spending time around trees is scientifically proven to lower cortisol levels and reduce stress. We don't just grow the forest; it heals us back.",
+            "A single mature tree can absorb up to 48 pounds of carbon dioxide per year, breathing fresh life into our shared ecosystem."
+        ];
 
         // UI Options
         const treeNames = ["Sproutling", "Bramble", "Canopy", "Whisper", "Puff", "Willow"];
@@ -522,11 +565,6 @@ onSnapshot(collection(db, "trees"), (snapshot) => {
             document.getElementById('tree-info-popup').classList.remove('active');
         };
 
-        document.getElementById('reset-btn').onclick = () => {
-            plantedTrees.forEach(tree => scene.remove(tree));
-            plantedTrees.length = 0; 
-            document.getElementById('tree-info-popup').classList.remove('active');
-        };
 
         // --- TIME SLIDER LOGIC ---
 // --- TIME SLIDER LOGIC ---
@@ -664,6 +702,35 @@ onSnapshot(collection(db, "trees"), (snapshot) => {
             }
         };
 
+       
+        function triggerFactPopup() {
+            const popup = document.getElementById('fact-popup');
+            const factText = document.getElementById('fact-text');
+            
+            // Pick a random fact
+            const randomFact = motherlandFacts[Math.floor(Math.random() * motherlandFacts.length)];
+            factText.textContent = randomFact;
+            
+            // Clean up old sparkles
+            document.querySelectorAll('.sparkle').forEach(el => el.remove());
+
+            // Generate 6 random sparkles around the edges
+            for(let i = 0; i < 6; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.top = `${Math.random() * 100}%`;
+                sparkle.style.left = `${Math.random() * 100}%`;
+                sparkle.style.animationDelay = `${Math.random() * 1}s`;
+                popup.appendChild(sparkle);
+            }
+
+            popup.classList.add('active');
+        }
+
+        document.getElementById('close-fact-btn').onclick = () => {
+            document.getElementById('fact-popup').classList.remove('active');
+        };
+        
 // --- FIREBASE: SAVE A NEW TREE ---
 document.getElementById('finish-build-btn').onclick = async () => {
     // 1. Hide the UI immediately so it feels fast for the user
@@ -687,6 +754,14 @@ document.getElementById('finish-build-btn').onclick = async () => {
             nz: pendingHitNormal.z,
             timestamp: new Date()
         });
+        sessionTreesPlanted++;
+        if (sessionTreesPlanted % 2 === 0) {
+            // Wait just a brief moment for the tree to visually appear before showing the popup
+            setTimeout(() => {
+                triggerFactPopup();
+            }, 800); 
+        }
+
     } catch (e) {
         console.error("Error adding document: ", e);
     }
@@ -782,13 +857,15 @@ document.getElementById('finish-build-btn').onclick = async () => {
             fireflies.rotation.x += 0.0005;
 
             // Smooth scale for planted trees (Hover effect)
-            plantedTrees.forEach(tree => {
-                if(tree.userData.targetScale) {
-                    const currentScale = tree.scale.x;
-                    const newScale = THREE.MathUtils.lerp(currentScale, tree.userData.targetScale, 0.15); 
-                    tree.scale.set(newScale, newScale, newScale);
-                }
-            });
+           plantedTrees.forEach(tree => {
+        if (tree.userData && tree.userData.targetScale) {
+            tree.scale.lerp(new THREE.Vector3(
+                tree.userData.targetScale, 
+                tree.userData.targetScale, 
+                tree.userData.targetScale
+            ), 0.1); // 0.1 is the speed of the smooth growth
+        }
+    });
 
             // --- NEW: AUTO TIME OF DAY ---
             if (!isUserDraggingTime) {
