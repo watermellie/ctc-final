@@ -34,7 +34,7 @@
             transition: color 0.5s ease;
         }
         
-        #container { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1; }
+        #container { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1; touch-action: none; }
         
         /* Smooth Overlays */
         .entrance-overlay {
@@ -47,15 +47,17 @@
         }
         .entrance-overlay.hidden { opacity: 0; pointer-events: none; }
 
-        /* Dynamic glow background for the entrance + tree builder */
+        /* Dynamic glow background for the entrance + tree builder + flower overlay */
         #builder-overlay,
-        #entrance {
+        #entrance,
+        #flower-overlay {
             overflow: hidden;
             isolation: isolate;
             background: rgba(252, 248, 242, 0.65);
         }
         #builder-overlay::before,
-        #entrance::before {
+        #entrance::before,
+        #flower-overlay::before {
             content: '';
             position: absolute;
             inset: 0;
@@ -71,7 +73,8 @@
             z-index: -1;
         }
         #builder-overlay::after,
-        #entrance::after {
+        #entrance::after,
+        #flower-overlay::after {
             content: '';
             position: absolute;
             inset: -6%;
@@ -357,9 +360,105 @@
             border-radius: 50%; box-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700; 
             animation: twinkle 1.5s infinite alternate ease-in-out; pointer-events: none;
         }
-        @keyframes twinkle { 
-            0% { opacity: 0.2; transform: scale(0.5) translateY(0); } 
-            100% { opacity: 1; transform: scale(1.5) translateY(-10px); } 
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(0.5) translateY(0); }
+            100% { opacity: 1; transform: scale(1.5) translateY(-10px); }
+        }
+
+        /* Onboarding instruction tooltips */
+        #instructions {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 18px;
+            z-index: 15;
+            pointer-events: none;
+        }
+        #instructions.show {
+            display: flex;
+            animation: pulseInstructions 5.5s ease-out forwards;
+        }
+        .instruction-card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            color: #1a1a1a;
+        }
+        .instruction-card svg {
+            flex-shrink: 0;
+            opacity: 0.75;
+        }
+        .instruction-title { font-size: 0.85rem; font-weight: 500; letter-spacing: 0.02em; }
+        .instruction-sub { font-size: 0.72rem; opacity: 0.6; font-weight: 300; margin-top: 1px; }
+        body.dark-mode .instruction-card {
+            background: rgba(20, 22, 28, 0.5);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #fcfcfc;
+        }
+        @keyframes pulseInstructions {
+            0%   { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            8%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+            20%  { opacity: 0.65; }
+            32%  { opacity: 1; }
+            44%  { opacity: 0.65; }
+            56%  { opacity: 1; }
+            70%  { opacity: 0.85; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 720px) {
+            .title { font-size: 2.2rem; }
+            .name-input { width: 80vw; max-width: 280px; }
+
+            .top-left-ui, .top-right-ui { top: 16px; right: 16px; left: auto; }
+            .top-left-ui { left: 16px; right: auto; }
+            .bottom-left-ui { bottom: 16px; left: 16px; gap: 8px; }
+            .top-center-ui { top: 12px; }
+            .time-slider { width: 140px; }
+            .top-right-ui { gap: 4px; }
+            .top-right-ui .ui-btn { padding: 8px 14px; font-size: 0.82rem; }
+            .user-display { font-size: 0.9rem; }
+
+            .credits { font-size: 0.65rem; max-width: 60vw; line-height: 1.35; }
+            .ui-btn.small { padding: 5px 10px; font-size: 0.72rem; }
+
+            #instructions {
+                flex-direction: column;
+                gap: 10px;
+                bottom: 24%;
+                width: max-content;
+                max-width: 90vw;
+            }
+            .instruction-card { padding: 10px 14px; }
+            .instruction-title { font-size: 0.78rem; }
+            .instruction-sub { font-size: 0.68rem; }
+
+            .glass-popup { max-width: 86vw; padding: 22px 20px; }
+            #popup-flowers { max-width: 100%; }
+
+            .about-content { max-width: 92vw; max-height: 78vh; padding: 0 18px; }
+            .about-title { font-size: 1.9rem; }
+            .about-text { font-size: 0.95rem; line-height: 1.6; }
+
+            #tree-preview-container,
+            #flower-preview-container {
+                width: 180px; height: 180px; margin-bottom: 18px;
+            }
+            .selector-container { width: 86vw; max-width: 280px; }
+
+            .confirm-plant-btn { padding: 10px 20px; font-size: 0.85rem; }
+
+            .fact-popup { max-width: 86vw; padding: 28px 22px; }
         }
     </style>
 </head>
@@ -480,33 +579,58 @@
         </div>
     </div>
 
-    <div class="top-left-ui">
-        <button id="logout-btn" class="ui-btn">← log out</button>
-    </div>
 
     <div class="top-center-ui">
         <div class="slider-label">Time of Day</div>
 <input type="range" id="time-slider" min="0" max="100" value="0" step="0.001" class="time-slider">    </div>
 
     <div class="bottom-left-ui">
-        <button id="mute-btn" class="ui-btn small">🔊 Mute</button>
+        <div style="display: flex; gap: 8px;">
+            <button id="mute-btn" class="ui-btn small">🔊 Mute</button>
+            <button id="about-btn" class="ui-btn small">📜 About</button>
+        </div>
         <div class="credits">
             Melissa.Chen ® <a href="https://watermellie.com" target="_blank" rel="noopener noreferrer">watermellie.com</a><br>
             &copy; 2026 All rights reserved.
         </div>
     </div>
-    
+
     <div class="top-right-ui">
         <div id="user-display" class="user-display"></div>
-<button id="plant-mode-btn" class="plant-text-btn">+ plant your roots [p]</button>    </div>
-
-    <div class="bottom-right-ui">
-        <button id="about-btn" class="ui-btn icon">?</button>
+        <button id="logout-btn" class="plant-text-btn" style="font-size: 0.85rem; opacity: 0.7;">log out</button>
+        <button id="plant-mode-btn" class="ui-btn">🌳 plant your roots [p]</button>
     </div>
 
     <div id="target-ui">
         <div class="crosshair"></div>
         <button id="confirm-plant" class="confirm-plant-btn">Plant Here</button>
+    </div>
+
+    <div id="instructions">
+        <div class="instruction-card">
+            <svg width="22" height="30" viewBox="0 0 22 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 2 C6 2 3 5.5 3 10 L3 20 C3 24.5 6 28 11 28 C16 28 19 24.5 19 20 L19 10 C19 5.5 16 2 11 2 Z" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M3 11 L11 11 L11 2" fill="currentColor" fill-opacity="0.25"/>
+                <line x1="11" y1="2" x2="11" y2="11" stroke="currentColor" stroke-width="1.2"/>
+                <line x1="3" y1="11" x2="11" y2="11" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+            <div>
+                <div class="instruction-title">Left-click + drag</div>
+                <div class="instruction-sub">to orbit</div>
+            </div>
+        </div>
+        <div class="instruction-card">
+            <svg width="22" height="30" viewBox="0 0 22 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 2 C6 2 3 5.5 3 10 L3 20 C3 24.5 6 28 11 28 C16 28 19 24.5 19 20 L19 10 C19 5.5 16 2 11 2 Z" stroke="currentColor" stroke-width="1.4"/>
+                <rect x="9.5" y="7" width="3" height="6" rx="1.5" fill="currentColor"/>
+                <path d="M11 4 L11 6 M9 5.2 L11 4 L13 5.2" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round"/>
+                <path d="M11 16 L11 14 M9 14.8 L11 16 L13 14.8" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round"/>
+            </svg>
+            <div>
+                <div class="instruction-title">Scroll</div>
+                <div class="instruction-sub">to zoom in &amp; out</div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
@@ -515,7 +639,7 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         // Import Firebase (you likely already have this part!)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, onSnapshot, serverTimestamp, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // PASTE YOUR COPIED CONFIG HERE:
 const firebaseConfig = {
@@ -694,6 +818,8 @@ const db = getFirestore(app);
         const plantedTrees = [];
         let hoveredTree = null;
         let sessionTreesPlanted = 0;
+        const treesToBloom = new Set();
+        const flowersToBloom = new Set();
         const motherlandFacts = [
             "Trees talk to each other. Beneath the soil, fungal networks allow trees to share nutrients and send distress signals to their neighbors.",
             "Some trees keep a chemical memory of environmental stress, passing down resilience to their saplings so the next generation grows stronger.",
@@ -857,11 +983,36 @@ const db = getFirestore(app);
                 isFlower: true,
                 planter: flowerData.planter || "@anonymous",
                 typeIndex: typeIndex,
+                timestamp: flowerData.timestamp,
                 ageDays: getAgeDays(flowerData.timestamp),
                 ageLabel: getAgeLabel(getAgeDays(flowerData.timestamp))
             };
             tree.add(flower);
             return flower;
+        }
+
+        function bloomFlower(flower) {
+            const target = flower.scale.clone();
+            flower.scale.set(0.001, 0.001, 0.001);
+
+            const worldPos = new THREE.Vector3();
+            flower.getWorldPosition(worldPos);
+            spawnSparkles(worldPos, 0.35);
+
+            const start = performance.now();
+            const duration = 700;
+            function tick() {
+                const elapsed = performance.now() - start;
+                if (elapsed >= duration) {
+                    flower.scale.copy(target);
+                    return;
+                }
+                const t = elapsed / duration;
+                const eased = 1 - Math.pow(1 - t, 3);
+                flower.scale.set(target.x * eased, target.y * eased, target.z * eased);
+                requestAnimationFrame(tick);
+            }
+            tick();
         }
 
         function updateFlowerPreview() {
@@ -889,6 +1040,62 @@ const db = getFirestore(app);
 
         function getTreeSizeValue(index) {
             return scaleOptions[index]?.val ?? scaleOptions[1].val;
+        }
+
+        function spawnSparkles(worldPos, radius = 0.7) {
+            const count = 36;
+            const geom = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = new Float32Array(count * 3);
+            for (let i = 0; i < count; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = radius * (0.2 + Math.random() * 0.5);
+                const dx = r * Math.sin(phi) * Math.cos(theta);
+                const dy = r * Math.sin(phi) * Math.sin(theta);
+                const dz = r * Math.cos(phi);
+                positions[i * 3]     = worldPos.x + dx;
+                positions[i * 3 + 1] = worldPos.y + dy;
+                positions[i * 3 + 2] = worldPos.z + dz;
+                const speed = 0.004 * (0.4 + Math.random());
+                velocities[i * 3]     = (dx / r) * speed;
+                velocities[i * 3 + 1] = (dy / r) * speed;
+                velocities[i * 3 + 2] = (dz / r) * speed;
+            }
+            geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({
+                color: 0xfff1b0,
+                size: 0.07,
+                transparent: true,
+                opacity: 1,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const sparkles = new THREE.Points(geom, mat);
+            scene.add(sparkles);
+
+            const start = performance.now();
+            const duration = 1400;
+            function tick() {
+                const elapsed = performance.now() - start;
+                if (elapsed >= duration) {
+                    scene.remove(sparkles);
+                    geom.dispose();
+                    mat.dispose();
+                    return;
+                }
+                const t = elapsed / duration;
+                const arr = geom.attributes.position.array;
+                for (let i = 0; i < count; i++) {
+                    arr[i * 3]     += velocities[i * 3];
+                    arr[i * 3 + 1] += velocities[i * 3 + 1];
+                    arr[i * 3 + 2] += velocities[i * 3 + 2];
+                }
+                geom.attributes.position.needsUpdate = true;
+                mat.opacity = 1 - t * t;
+                requestAnimationFrame(tick);
+            }
+            tick();
         }
 
         function getTreeUserData(data, treeDocId, fullTreeScale) {
@@ -964,6 +1171,21 @@ const db = getFirestore(app);
                         scene.add(treeRoot);
                         plantedTrees.push(treeRoot);
 
+                        if (treesToBloom.has(doc.id)) {
+                            treesToBloom.delete(doc.id);
+                            treeRoot.scale.set(0.001, 0.001, 0.001);
+                            spawnSparkles(treeRoot.position, fullTreeScale * 5);
+                        }
+
+                        if (flowersToBloom.size) {
+                            treeRoot.children.forEach(child => {
+                                if (child.userData?.isFlower && flowersToBloom.has(child.userData.timestamp)) {
+                                    flowersToBloom.delete(child.userData.timestamp);
+                                    bloomFlower(child);
+                                }
+                            });
+                        }
+
                         if (selectedTreeForFlower && selectedTreeForFlower.userData.docId === doc.id) {
                             selectedTreeForFlower = treeRoot;
                             if (document.getElementById('tree-info-popup').classList.contains('active')) {
@@ -1000,14 +1222,35 @@ const db = getFirestore(app);
         };
 
         // --- MULTI-USER DEMO UI EVENTS ---
+        const isTouchDevice = matchMedia('(pointer: coarse)').matches;
+        if (isTouchDevice) {
+            const plantBtn = document.getElementById('plant-mode-btn');
+            if (plantBtn) plantBtn.textContent = '🌳 plant your roots';
+        }
+
         document.getElementById('play-btn').onclick = () => {
             const name = document.getElementById('username-input').value;
             currentUser = name ? `@${name.toLowerCase()}` : '@anonymous';
             document.getElementById('user-display').textContent = currentUser;
             document.getElementById('entrance').classList.add('hidden');
-            
+
             // Start playing audio after user interaction
             bgm.play().catch(e => console.log("Audio autoplay blocked or file missing:", e));
+
+            // Show interaction hints briefly (touch-aware copy)
+            const inst = document.getElementById('instructions');
+            const titles = inst.querySelectorAll('.instruction-title');
+            const subs = inst.querySelectorAll('.instruction-sub');
+            if (isTouchDevice) {
+                titles[0].textContent = 'Touch + drag';
+                subs[0].textContent = 'to orbit';
+                titles[1].textContent = 'Pinch';
+                subs[1].textContent = 'to zoom in & out';
+            }
+            inst.classList.remove('show');
+            void inst.offsetWidth;
+            inst.classList.add('show');
+            setTimeout(() => inst.classList.remove('show'), 5500);
         };
 
         document.getElementById('logout-btn').onclick = () => {
@@ -1138,11 +1381,11 @@ const db = getFirestore(app);
             if(isPlantMode) {
                 targetUi.style.display = 'block';
                 setTimeout(() => crosshair.style.transform = 'scale(1)', 10);
-                e.target.textContent = 'x cancel planting [esc]';
+                e.target.textContent = isTouchDevice ? 'x cancel planting' : 'x cancel planting [esc]';
             } else {
                 crosshair.style.transform = 'scale(0.8)';
                 setTimeout(() => targetUi.style.display = 'none', 300);
-                e.target.textContent = '+ plant your roots [p]';
+                e.target.textContent = isTouchDevice ? '🌳 plant your roots' : '🌳 plant your roots [p]';
             }
         };
 
@@ -1207,9 +1450,13 @@ document.getElementById('finish-build-btn').onclick = async () => {
     document.getElementById('plant-mode-btn').click();
     // Inside await addDoc(...)
 
-    // 2. Send the tree data to Firebase
+    // 2. Send the tree data to Firebase with a readable doc id: <user>_<timestamp>
     try {
-        await addDoc(collection(db, "trees"), {
+        const sanitizedUser = (currentUser || '@anonymous').replace(/^@/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const isoStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const treeDocId = `${sanitizedUser}_${isoStamp}`;
+        const treeRef = doc(collection(db, "trees"), treeDocId);
+        await setDoc(treeRef, {
             user: currentUser,
             note: document.getElementById('tree-memory-input').value || "Grew quietly.",
             styleIndex: styleIndex,
@@ -1223,10 +1470,11 @@ document.getElementById('finish-build-btn').onclick = async () => {
             nz: pendingHitNormal.z,
             timestamp: serverTimestamp()
         });
+        treesToBloom.add(treeDocId);
         sessionTreesPlanted++;
         setTimeout(() => {
             triggerFactPopup();
-        }, 800);
+        }, 1900);
 
     } catch (e) {
         console.error("Error adding document: ", e);
@@ -1269,11 +1517,13 @@ document.getElementById('leave-flower-btn').onclick = () => {
             setTimeout(() => overlay.style.display = 'none', 600);
 
             try {
+                flowersToBloom.add(flowerData.timestamp);
                 await updateDoc(treeRef, {
                     flowers: arrayUnion(flowerData)
                 });
             } catch (e) {
                 console.error("Error leaving flower: ", e);
+                flowersToBloom.delete(flowerData.timestamp);
             }
         };
 
